@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="dashboard-bg">
+    <div class="workspace">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h3>Navigation</h3>
+            <ul class="side-menu">
+                <li><a href="{{ url_for('dashboard') }}" class="active">📋 Job Board</a></li>
+
+                {% if current_user.is_customer or current_user.role in ['admin', 'manager', 'coordinator'] %}
+                <li><a href="{{ url_for('request_service') }}">➕ New Request</a></li>
+                {% endif %}
+
+                {% if current_user.role in ['admin', 'manager'] %}
+                <li><a href="{{ url_for('admin_panel') }}">🛡️ Admin Panel</a></li>
+                {% endif %}
+            </ul>
+
+            <div style="margin-top: 2rem;">
+                <h3>Priority Legend</h3>
+                <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.9;">
+                    <div><span class="prio-tag prio-Critical">Critical</span></div>
+                    <div><span class="prio-tag prio-High">High</span></div>
+                    <div><span class="prio-tag prio-Medium">Medium</span></div>
+                    <div><span class="prio-tag prio-Low">Low</span></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="kanban-container">
+
+            <!-- Header + Stats -->
+            <div style="margin-bottom: 1.5rem;">
+                <h2 style="margin-bottom: 0.3rem;">
+                    {% if current_user.is_technician %}
+                        My Assigned Jobs
+                    {% elif current_user.is_customer %}
+                        My Requests
+                    {% else %}
+                        Job Tracking Board
+                    {% endif %}
+                </h2>
+                <p class="text-muted" style="font-size: 0.9rem;">
+                    {% if current_user.is_technician %}
+                        You can only see jobs assigned to you.
+                    {% elif current_user.is_customer %}
+                        Track the progress of your requests.
+                    {% else %}
+                        Manage and track all service jobs.
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- Kanban Board -->
+            <div class="kanban-board">
+
+                {% set lanes = [
+                    ('New', 'New'),
+                    ('Quoted', 'Quoted'),
+                    ('Approved', 'Approved'),
+                    ('In Progress', 'In Progress'),
+                    ('On Hold', 'On Hold'),
+                    ('Quality Check', 'Quality Check'),
+                    ('Completed', 'Completed / Closed')
+                ] %}
+
+                {% for status_key, lane_title in lanes %}
+                <div class="kanban-lane">
+                    <div class="lane-header">
+                        {{ lane_title }}
+                        <span class="lane-count">
+                            {{ jobs | selectattr('status', 'equalto', status_key) | list | length }}
+                        </span>
+                    </div>
+
+                    {% for job in jobs if job.status == status_key or (status_key == 'Completed' and job.status == 'Closed') %}
+                    <div class="job-card" onclick="window.location='{{ url_for('job_detail', job_id=job.job_id) }}'">
+                        
+                        <div class="card-top">
+                            <span class="badge">#{{ job.job_id }}</span>
+                            <span class="prio-tag prio-{{ job.priority }}">{{ job.priority }}</span>
+                        </div>
+
+                        <h4 class="card-title">{{ job.book_title }}</h4>
+                        <p class="card-author">{{ job.author_name }}</p>
+                        <div class="card-service">{{ job.service_type }}</div>
+
+                        {% if current_user.is_staff %}
+                            <div class="card-meta-info">
+                                Client: {{ job.client_email }}
+                            </div>
+
+                            <!-- Quote -->
+                            <div class="card-quote" onclick="event.stopPropagation()">
+                                {% if not current_user.is_technician %}
+                                    <input type="number" 
+                                           class="quote-input"
+                                           value="{{ '%.2f'|format(job.quote_amount or 0) }}"
+                                           step="0.01"
+                                           data-job-id="{{ job.job_id }}">
+                                    <button class="btn-sm btn-save-quote" data-job-id="{{ job.job_id }}">Set</button>
+                                {% else %}
+                                    <strong>${{ '%.2f'|format(job.quote_amount or 0) }}</strong>
+                                {% endif %}
+                            </div>
+
+                            <!-- Technician Assignment -->
+                            {% if not current_user.is_technician %}
+                            <div class="card-assign" onclick="event.stopPropagation()">
+                                <select class="card-tech-select" data-job-id="{{ job.job_id }}">
+                                    <option value="">-- Unassigned --</option>
+                                    {% for tech in techs %}
+                                    <option value="{{ tech.user_id }}"
+                                        {% if job.assigned_tech_id == tech.user_id %}selected{% endif %}>
+                                        {{ tech.email }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% else %}
+                            <div class="card-meta-info">
+                                Assigned to you
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <!-- Customer View -->
+                            {% if job.status == 'Quoted' %}
+                            <div class="quote-approve-box" onclick="event.stopPropagation()">
+                                <div>Quote: <strong>${{ '%.2f'|format(job.quote_amount) }}</strong></div>
+                                <button class="btn-sm btn-customer-approve" data-job-id="{{ job.job_id }}">
+                                    Approve Quote
+                                </button>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+
+                        <!-- Status -->
+                        <div class="card-status" onclick="event.stopPropagation()">
+                            {% if current_user.is_staff %}
+                                <select class="card-status-select" data-job-id="{{ job.job_id }}">
+                                    {% for s in ['New','Quoted','Approved','In Progress','On Hold','Quality Check','Completed','Closed'] %}
+                                    <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <span class="badge">{{ job.status }}</span>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                    {% else %}
+                        <div class="empty-lane">No jobs</div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

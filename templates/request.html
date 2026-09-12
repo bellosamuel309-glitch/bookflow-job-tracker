@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="request-bg">
+    <div style="max-width:720px; margin:0 auto;">
+        <div class="glass-card" style="max-width:100%;">
+            <h2 style="text-align:center; margin-bottom:1.5rem;">Submit Service Request</h2>
+            <form method="POST" enctype="multipart/form-data">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                    <div class="form-group">
+                        <label>Book Title</label>
+                        <input type="text" name="book_title" required placeholder="e.g. The Great Gatsby">
+                    </div>
+                    <div class="form-group">
+                        <label>Author / Origin</label>
+                        <input type="text" name="author_name" required placeholder="e.g. F. Scott Fitzgerald">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                    <div class="form-group">
+                        <label>Service Type</label>
+                        <select name="service_type">
+                            <option value="Binding">Custom Binding</option>
+                            <option value="Restoration">Restoration & Repair</option>
+                            <option value="Digitization">Digitization</option>
+                            <option value="Research">Historical Research</option>
+                            <option value="Printing">Custom Printing</option>
+                            <option value="Special Orders">Special Orders</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select name="priority">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Details & Requirements</label>
+                    <textarea name="details" rows="4" placeholder="Describe requirements..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Attachments (photos, PDFs)</label>
+                    <input type="file" name="attachments" multiple accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx">
+                </div>
+                <button type="submit" class="btn-block">Submit Request</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

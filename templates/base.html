@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookFlow – Book Services & Job Tracking</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">📚 BookFlow</div>
+        <div style="display: flex; gap: 1rem; align-items: center; width: 100%;">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                {% if current_user.is_staff %}
+                    <a href="{{ url_for('admin_panel') }}">Admin panel</a>
+                {% endif %}
+                <span style="margin-left: auto; color: var(--text-muted); font-size: 0.85rem;">{{ current_user.email }}</span>
+                <a href="{{ url_for('logout') }}" style="color: #f87171 !important;">Logout</a>
+            {% endif %}
+        </div>
+    </nav>
+    <div class="flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+    {% block content %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

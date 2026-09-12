@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="dashboard-bg">
+    <div class="detail-container">
+
+        <!-- Header -->
+        <div class="detail-header">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="flex gap-2 items-center mb-2">
+                        <span class="badge">Job #{{ job.job_id }}</span>
+                        <span class="prio-tag prio-{{ job.priority }}">{{ job.priority }}</span>
+                        <span class="badge status-badge">{{ job.status }}</span>
+                    </div>
+                    <h1 style="font-size: 1.6rem; margin-bottom: 0.3rem;">{{ job.book_title }}</h1>
+                    <p class="text-muted">by {{ job.author_name }} · {{ job.service_type }}</p>
+                </div>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-sm">← Back to Board</a>
+            </div>
+        </div>
+
+        <div class="detail-grid">
+
+            <!-- ==================== LEFT COLUMN ==================== -->
+            <div>
+                <!-- Request Details -->
+                <div class="detail-card">
+                    <h3>Request Details</h3>
+                    <p style="white-space: pre-wrap; color: #e2e8f0;">
+                        {{ job.details or 'No additional details provided.' }}
+                    </p>
+
+                    <div class="info-grid">
+                        <div>
+                            <div class="text-muted">Client</div>
+                            <div>{{ job.client_email }}</div>
+                        </div>
+                        <div>
+                            <div class="text-muted">Assigned Technician</div>
+                            <div>{{ job.tech_email or 'Unassigned' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-muted">Quote Amount</div>
+                            <div><strong>${{ '%.2f'|format(job.quote_amount or 0) }}</strong></div>
+                        </div>
+                        <div>
+                            <div class="text-muted">Created</div>
+                            <div>{{ job.created_at }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attachments -->
+                <div class="detail-card">
+                    <h3>Attachments</h3>
+                    {% if attachments %}
+                        <ul class="attachment-list">
+                            {% for file in attachments %}
+                            <li>
+                                <a href="{{ url_for('uploaded_file', filename=file.filename) }}" target="_blank">
+                                    📎 {{ file.original_name }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">No attachments uploaded.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Notes -->
+                <div class="detail-card">
+                    <h3>Notes & Comments</h3>
+
+                    <form id="note-form" data-job-id="{{ job.job_id }}" class="mb-3">
+                        <textarea id="note-content" rows="3" placeholder="Add a note..." required></textarea>
+
+                        {% if current_user.is_staff %}
+                        <label class="internal-note-label">
+                            <input type="checkbox" id="note-internal">
+                            Internal note (hidden from customer)
+                        </label>
+                        {% endif %}
+
+                        <button type="submit" class="btn btn-sm">Add Note</button>
+                    </form>
+
+                    {% for note in notes %}
+                        {% if not note.is_internal or current_user.is_staff %}
+                        <div class="note-item">
+                            <div class="note-header">
+                                <strong>{{ note.email }}</strong>
+                                <span class="text-muted">{{ note.created_at }}</span>
+                            </div>
+                            <p>{{ note.content }}</p>
+                            {% if note.is_internal %}
+                                <span class="badge internal-badge">Internal</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted">No notes yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- ==================== RIGHT COLUMN ==================== -->
+            <div>
+
+                <!-- ========== TECHNICIAN ACTIONS ========== -->
+                {% if current_user.is_technician and job.assigned_tech_id == current_user.id %}
+                <div class="detail-card action-card">
+                    <h3>🛠️ My Work Actions</h3>
+
+                    <div class="form-group">
+                        <label>Update Status</label>
+                        <select class="card-status-select" data-job-id="{{ job.job_id }}">
+                            <option value="In Progress" {% if job.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                            <option value="On Hold" {% if job.status == 'On Hold' %}selected{% endif %}>On Hold (Blocked)</option>
+                            <option value="Quality Check" {% if job.status == 'Quality Check' %}selected{% endif %}>Quality Check</option>
+                            <option value="Completed" {% if job.status == 'Completed' %}selected{% endif %}>Completed</option>
+                        </select>
+                    </div>
+
+                    <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.8rem;">
+                        You can only update jobs assigned to you.
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- ========== MANAGER / COORDINATOR / ADMIN ACTIONS ========== -->
+                {% if current_user.role in ['admin', 'manager', 'coordinator'] %}
+                <div class="detail-card action-card">
+                    <h3>⚡ Staff Actions</h3>
+
+                    <div class="form-group">
+                        <label>Change Status</label>
+                        <select class="card-status-select" data-job-id="{{ job.job_id }}">
+                            {% for s in ['New','Quoted','Approved','In Progress','On Hold','Quality Check','Completed','Closed'] %}
+                            <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Assign Technician</label>
+                        <select class="card-tech-select" data-job-id="{{ job.job_id }}">
+                            <option value="">-- Unassigned --</option>
+                            {% for tech in techs %}
+                            <option value="{{ tech.user_id }}" {% if job.assigned_tech_id == tech.user_id %}selected{% endif %}>
+                                {{ tech.email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Update Quote ($)</label>
+                        <div class="flex gap-2">
+                            <input type="number" 
+                                   class="quote-input" 
+                                   value="{{ '%.2f'|format(job.quote_amount or 0) }}" 
+                                   step="0.01" 
+                                   style="flex:1;">
+                            <button class="btn btn-sm btn-save-quote" data-job-id="{{ job.job_id }}">Save</button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ========== CUSTOMER ACTIONS ========== -->
+                {% if current_user.is_customer and job.customer_id == current_user.id %}
+                <div class="detail-card action-card">
+                    <h3>Your Actions</h3>
+
+                    {% if job.status == 'Quoted' %}
+                        <div class="quote-box">
+                            <p>Quote Amount: <strong>${{ '%.2f'|format(job.quote_amount) }}</strong></p>
+                            <button class="btn btn-sm btn-customer-approve" data-job-id="{{ job.job_id }}" style="width:100%;">
+                                Approve Quote
+                            </button>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No actions available at this stage.</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Activity Log -->
+                <div class="detail-card">
+                    <h3>Activity Log</h3>
+                    {% for log in logs %}
+                    <div class="log-item">
+                        <div class="log-header">
+                            <strong>{{ log.email }}</strong>
+                            <span class="text-muted">{{ log.created_at }}</span>
+                        </div>
+                        <div class="log-body">
+                            {{ log.action }}
+                            {% if log.old_value or log.new_value %}
+                                <span class="text-muted">
+                                    ({{ log.old_value or '—' }} → {{ log.new_value or '—' }})
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                        <p class="text-muted">No activity recorded yet.</p>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

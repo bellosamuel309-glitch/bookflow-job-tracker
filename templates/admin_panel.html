@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="dashboard-bg">
+    <div class="admin-container">
+
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid var(--border);
+                    border-radius: 14px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1.2rem;">
+            <div style="font-size: 2.5rem;">🛡️</div>
+            <div>
+                <h1 style="font-size: 1.4rem; margin-bottom: 0.2rem;">Admin Control Panel</h1>
+                <p class="text-muted" style="font-size: 0.95rem;">Manage users, create staff accounts, and control all service requests</p>
+            </div>
+        </div>
+
+        <!-- ==================== CREATE NEW USER ==================== -->
+        <div class="detail-card" style="margin-bottom: 2rem;">
+            <h3>Create New Account</h3>
+            <form method="POST" action="{{ url_for('admin_create_user') }}" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Email</label>
+                    <input type="email" name="email" required placeholder="newuser@example.com">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Password</label>
+                    <input type="text" name="password" required placeholder="Password" value="test123">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Role</label>
+                    <select name="role">
+                        <option value="admin">Admin</option>
+                        <option value="manager">Manager</option>
+                        <option value="coordinator">Coordinator</option>
+                        <option value="technician">Technician</option>
+                        <option value="customer">Customer</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn">Create Account</button>
+            </form>
+        </div>
+
+        <!-- ==================== ALL USERS ==================== -->
+        <div class="detail-card" style="padding: 0; overflow: hidden; margin-bottom: 2rem;">
+            <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);">
+                <h3 style="margin: 0;">All User Accounts</h3>
+            </div>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>#{{ user.user_id }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <select class="admin-role-select" data-user-id="{{ user.user_id }}"
+                                    style="padding: 4px 8px; font-size: 0.85rem; width: auto;">
+                                {% for role in roles %}
+                                <option value="{{ role }}" {% if user.role == role %}selected{% endif %}>
+                                    {{ role|upper }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <span style="color: {% if user.status == 'active' %}#34d399{% else %}#f87171{% endif %};
+                                         font-weight: 600; text-transform: uppercase; font-size: 0.85rem;">
+                                {{ user.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if user.status == 'active' %}
+                                <button class="btn btn-sm btn-danger btn-admin-action"
+                                        data-user-id="{{ user.user_id }}" data-action="ban">Ban</button>
+                            {% else %}
+                                <button class="btn btn-sm btn-admin-action"
+                                        data-user-id="{{ user.user_id }}" data-action="unban"
+                                        style="background:#475569;">Unban</button>
+                            {% endif %}
+
+                            <button class="btn btn-sm btn-danger btn-admin-action"
+                                    data-user-id="{{ user.user_id }}" data-action="delete"
+                                    style="margin-left: 6px;">Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ==================== ALL REQUESTS / JOBS ==================== -->
+        <div class="detail-card" style="padding: 0; overflow: hidden;">
+            <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);">
+                <h3 style="margin: 0;">All Service Requests</h3>
+            </div>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Book Title</th>
+                        <th>Client</th>
+                        <th>Service</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Change Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr>
+                        <td>#{{ job.job_id }}</td>
+                        <td>
+                            <a href="{{ url_for('job_detail', job_id=job.job_id) }}" style="color: #93c5fd; text-decoration: none;">
+                                {{ job.book_title }}
+                            </a>
+                        </td>
+                        <td style="font-size: 0.85rem;">{{ job.client_email }}</td>
+                        <td>{{ job.service_type }}</td>
+                        <td><span class="prio-tag prio-{{ job.priority }}">{{ job.priority }}</span></td>
+                        <td><span class="badge">{{ job.status }}</span></td>
+                        <td>
+                            <select class="card-status-select" data-job-id="{{ job.job_id }}"
+                                    style="padding: 4px 8px; font-size: 0.85rem;">
+                                {% for s in ['New','Quoted','Approved','In Progress','On Hold','Quality Check','Completed','Closed'] %}
+                                <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted" style="padding: 1.5rem;">No requests yet</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
